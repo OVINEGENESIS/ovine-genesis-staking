@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Ovine Genesis NFT staking and points dashboard." />
+  <title>Ovine Genesis — Staking</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Press+Start+2P&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div class="noise"></div>
+
+  <header class="nav">
+    <a class="brand" href="#top">
+      <span class="brand-mark">OG</span>
+      <span>OVINE GENESIS</span>
+    </a>
+    <nav class="nav-links">
+      <a href="#dashboard">Dashboard</a>
+      <a href="#stake">Stake</a>
+      <a href="#leaderboard">Leaderboard</a>
+    </nav>
+    <button class="btn btn-primary" id="connectBtn">Connect Wallet</button>
+  </header>
+
+  <main id="top">
+    <section class="hero">
+      <div class="eyebrow">3333 HAND-DRAWN PIXEL OVINES</div>
+      <h1>STAKE YOUR OVINE.<br><span>EARN YOUR POINTS.</span></h1>
+      <p class="hero-copy">
+        Stake Ovine Genesis NFTs, earn points over time, and climb the community leaderboard.
+      </p>
+      <div class="hero-actions">
+        <a class="btn btn-primary btn-large" href="#stake">Start Staking</a>
+        <a class="btn btn-ghost btn-large" href="#dashboard">View Dashboard</a>
+      </div>
+
+      <div class="hero-stats">
+        <div><strong>3,333</strong><span>Total Supply</span></div>
+        <div><strong>10</strong><span>Points / NFT / Day</span></div>
+        <div><strong>24/7</strong><span>Point Accrual</span></div>
+      </div>
+    </section>
+
+    <section class="section" id="dashboard">
+      <div class="section-heading">
+        <div>
+          <div class="eyebrow">YOUR ACCOUNT</div>
+          <h2>Dashboard</h2>
+        </div>
+        <div class="wallet-chip" id="walletChip">Wallet not connected</div>
+      </div>
+
+      <div class="stat-grid">
+        <article class="card stat-card">
+          <span>Total Points</span>
+          <strong id="points">0</strong>
+          <small>Demo value until contract is connected</small>
+        </article>
+        <article class="card stat-card">
+          <span>Staked NFTs</span>
+          <strong id="stakedCount">0</strong>
+          <small>Out of your Ovine Genesis NFTs</small>
+        </article>
+        <article class="card stat-card">
+          <span>Daily Earn</span>
+          <strong id="dailyEarn">+0</strong>
+          <small>Points per day</small>
+        </article>
+      </div>
+    </section>
+
+    <section class="section" id="stake">
+      <div class="section-heading">
+        <div>
+          <div class="eyebrow">STAKING</div>
+          <h2>My Ovines</h2>
+        </div>
+        <button class="btn btn-ghost" id="stakeAllBtn">Stake All</button>
+      </div>
+
+      <div class="nft-grid" id="nftGrid">
+        <article class="card nft-card" data-staked="false">
+          <div class="nft-image pixel-bg"><span>#0696</span></div>
+          <div class="nft-info">
+            <div><h3>Ovine #696</h3><p>+10 pts/day</p></div>
+            <button class="btn btn-small stake-btn">Stake</button>
+          </div>
+        </article>
+
+        <article class="card nft-card" data-staked="false">
+          <div class="nft-image pixel-bg"><span>#1145</span></div>
+          <div class="nft-info">
+            <div><h3>Ovine #1145</h3><p>+10 pts/day</p></div>
+            <button class="btn btn-small stake-btn">Stake</button>
+          </div>
+        </article>
+
+        <article class="card nft-card" data-staked="false">
+          <div class="nft-image pixel-bg"><span>#2383</span></div>
+          <div class="nft-info">
+            <div><h3>Ovine #2383</h3><p>+10 pts/day</p></div>
+            <button class="btn btn-small stake-btn">Stake</button>
+          </div>
+        </article>
+      </div>
+
+      <p class="demo-note">
+        Demo UI only: staking buttons do not move NFTs on-chain yet. We will connect the real contract in a later step.
+      </p>
+    </section>
+
+    <section class="section" id="leaderboard">
+      <div class="section-heading">
+        <div>
+          <div class="eyebrow">COMMUNITY</div>
+          <h2>Leaderboard</h2>
+        </div>
+      </div>
+
+      <div class="card table-card">
+        <div class="table-row table-head"><span>Rank</span><span>Wallet</span><span>Points</span></div>
+        <div class="table-row"><span>#1</span><span>0x8A...91F2</span><span>25,420</span></div>
+        <div class="table-row"><span>#2</span><span>0x31...B7C4</span><span>21,800</span></div>
+        <div class="table-row"><span>#3</span><span>0xF2...44A1</span><span>18,200</span></div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <span>© 2026 Ovine Genesis</span>
+    <span>Hand-drawn pixel art • No AI</span>
+  </footer>
+
+  <script src="/app.js"></script>
+</body>
+</html>

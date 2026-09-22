@@ -1,0 +1,7 @@
+{
+  "name": "ovine-genesis-staking",
+  "compatibility_date": "2026-09-21",
+  "assets": {
+    "directory": "./public"
+  }
+}
