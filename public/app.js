@@ -21,16 +21,23 @@ const ROBINHOOD_CHAIN = {
   ]
 };
 
+let wallets = [];
 let provider = null;
 let account = null;
 
-// --------------------------------------------------
-// Wallet detection
-// --------------------------------------------------
+
+// ==========================================
+// ADDRESS
+// ==========================================
 
 function shortenAddress(address) {
   return `${address.slice(0, 6)}...${address.slice(-4)}`;
 }
+
+
+// ==========================================
+// WALLET UI
+// ==========================================
 
 function setConnected(address) {
   account = address;
@@ -50,19 +57,164 @@ function setDisconnected() {
   connectBtn.textContent = 'Connect Wallet';
   walletChip.textContent = 'Wallet not connected';
 
-  demoNote.textContent = 'Connect your wallet to continue.';
+  demoNote.textContent =
+    'Connect your wallet to continue.';
 }
 
-// --------------------------------------------------
-// Add / switch Robinhood Chain
-// --------------------------------------------------
+
+// ==========================================
+// MODAL
+// ==========================================
+
+function createWalletModal() {
+  const oldModal = document.getElementById('walletModal');
+
+  if (oldModal) {
+    oldModal.remove();
+  }
+
+  const modal = document.createElement('div');
+
+  modal.id = 'walletModal';
+
+  modal.innerHTML = `
+    <div class="og-wallet-overlay">
+      <div class="og-wallet-modal">
+
+        <button class="og-wallet-close" id="walletModalClose">
+          ×
+        </button>
+
+        <div class="og-wallet-title">
+          Connect Wallet
+        </div>
+
+        <div class="og-wallet-subtitle">
+          Choose your wallet
+        </div>
+
+        <div class="og-wallet-list" id="walletList"></div>
+
+        <div class="og-wallet-footer">
+          Make sure your wallet is installed in this browser.
+        </div>
+
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  document
+    .getElementById('walletModalClose')
+    .addEventListener('click', closeWalletModal);
+
+  document
+    .querySelector('.og-wallet-overlay')
+    .addEventListener('click', (event) => {
+      if (event.target.classList.contains('og-wallet-overlay')) {
+        closeWalletModal();
+      }
+    });
+
+  renderWalletList();
+}
+
+function closeWalletModal() {
+  const modal = document.getElementById('walletModal');
+
+  if (modal) {
+    modal.remove();
+  }
+}
+
+
+// ==========================================
+// WALLET LIST
+// ==========================================
+
+function renderWalletList() {
+  const list = document.getElementById('walletList');
+
+  if (!list) {
+    return;
+  }
+
+  list.innerHTML = '';
+
+  if (wallets.length === 0) {
+    list.innerHTML = `
+      <div class="og-no-wallet">
+        No compatible browser wallet detected.
+        <br><br>
+        Please install MetaMask, Rabby,
+        Coinbase Wallet, OKX, or another
+        EVM-compatible wallet.
+      </div>
+    `;
+
+    return;
+  }
+
+  wallets.forEach((wallet, index) => {
+
+    const button = document.createElement('button');
+
+    button.className = 'og-wallet-option';
+
+    const icon =
+      wallet.info?.icon ||
+      '';
+
+    const name =
+      wallet.info?.name ||
+      `Wallet ${index + 1}`;
+
+    button.innerHTML = `
+      <span class="og-wallet-icon">
+        ${
+          icon
+            ? `<img src="${icon}" alt="">`
+            : '◈'
+        }
+      </span>
+
+      <span class="og-wallet-name">
+        ${name}
+      </span>
+
+      <span class="og-wallet-arrow">
+        →
+      </span>
+    `;
+
+    button.addEventListener('click', async () => {
+
+      provider = wallet.provider;
+
+      closeWalletModal();
+
+      await connectWallet();
+
+    });
+
+    list.appendChild(button);
+  });
+}
+
+
+// ==========================================
+// ROBINHOOD CHAIN
+// ==========================================
 
 async function switchToRobinhood() {
+
   if (!provider) {
     throw new Error('Wallet provider not found.');
   }
 
   try {
+
     await provider.request({
       method: 'wallet_switchEthereumChain',
       params: [
@@ -71,33 +223,41 @@ async function switchToRobinhood() {
         }
       ]
     });
+
   } catch (error) {
 
-    // Chain is not added yet
+    // Chain not added to wallet
     if (error.code === 4902) {
 
       await provider.request({
         method: 'wallet_addEthereumChain',
-        params: [ROBINHOOD_CHAIN]
+        params: [
+          ROBINHOOD_CHAIN
+        ]
       });
 
     } else {
+
       throw error;
+
     }
   }
 }
 
-// --------------------------------------------------
-// Connect wallet
-// --------------------------------------------------
+
+// ==========================================
+// CONNECT WALLET
+// ==========================================
 
 async function connectWallet() {
 
   if (!provider) {
+
     alert(
-      'No compatible wallet detected.\n\n' +
-      'Please install MetaMask or Robinhood Wallet, then refresh this page.'
+      'No wallet provider selected.\n\n' +
+      'Please choose a wallet first.'
     );
+
     return;
   }
 
@@ -120,7 +280,6 @@ async function connectWallet() {
     if (parseInt(chainId, 16) !== CHAIN_ID) {
 
       alert(
-        'Wrong network.\n\n' +
         'Please switch to Robinhood Chain.'
       );
 
@@ -131,38 +290,46 @@ async function connectWallet() {
 
   } catch (error) {
 
-    console.error('Wallet connection error:', error);
+    console.error(
+      'Wallet connection error:',
+      error
+    );
 
     alert(
-      'Wallet connection failed.\n\n' +
-      (error?.message || 'Unknown error')
+      error?.message ||
+      'Wallet connection failed.'
     );
   }
 }
 
-// --------------------------------------------------
-// Account changes
-// --------------------------------------------------
+
+// ==========================================
+// ACCOUNT CHANGE
+// ==========================================
 
 function handleAccountsChanged(accounts) {
 
   if (!accounts || accounts.length === 0) {
+
     setDisconnected();
+
     return;
   }
 
   setConnected(accounts[0]);
 }
 
-// --------------------------------------------------
-// Network changes
-// --------------------------------------------------
+
+// ==========================================
+// CHAIN CHANGE
+// ==========================================
 
 function handleChainChanged(chainId) {
 
   if (parseInt(chainId, 16) !== CHAIN_ID) {
 
-    walletChip.textContent = 'Wrong network';
+    walletChip.textContent =
+      'Wrong network';
 
     demoNote.textContent =
       'Please switch to Robinhood Chain.';
@@ -171,82 +338,234 @@ function handleChainChanged(chainId) {
   }
 
   if (account) {
+
     setConnected(account);
+
   }
 }
 
-// --------------------------------------------------
-// EIP-6963 wallet discovery
-// --------------------------------------------------
 
-let discoveredWallets = [];
+// ==========================================
+// EIP-6963 WALLET DISCOVERY
+// ==========================================
 
 window.addEventListener(
   'eip6963:announceProvider',
   (event) => {
 
-    const wallet = event.detail;
+    const detail = event.detail;
 
-    if (!wallet || !wallet.provider) {
+    if (
+      !detail ||
+      !detail.provider ||
+      !detail.info
+    ) {
       return;
     }
 
-    discoveredWallets.push(wallet);
+    // Prevent duplicates
+    const exists = wallets.some(
+      wallet =>
+        wallet.info.uuid === detail.info.uuid
+    );
 
-    // Use the first discovered EVM wallet
-    if (!provider) {
-      provider = wallet.provider;
+    if (!exists) {
 
-      provider.on?.(
-        'accountsChanged',
-        handleAccountsChanged
-      );
+      wallets.push(detail);
 
-      provider.on?.(
-        'chainChanged',
-        handleChainChanged
-      );
     }
   }
 );
 
-// Ask installed wallets to announce themselves
+
+// Ask browser wallets to announce themselves
+
 window.dispatchEvent(
   new Event('eip6963:requestProvider')
 );
 
-// Fallback for older wallets
+
+// ==========================================
+// FALLBACK FOR OLDER WALLETS
+// ==========================================
+
 if (window.ethereum) {
 
-  if (!provider) {
-    provider = window.ethereum;
+  const fallbackExists = wallets.some(
+    wallet =>
+      wallet.provider === window.ethereum
+  );
+
+  if (!fallbackExists) {
+
+    wallets.push({
+      info: {
+        uuid: 'legacy-provider',
+        name: 'Browser Wallet',
+        icon: ''
+      },
+      provider: window.ethereum
+    });
+
   }
-
-  provider.on?.(
-    'accountsChanged',
-    handleAccountsChanged
-  );
-
-  provider.on?.(
-    'chainChanged',
-    handleChainChanged
-  );
 }
 
-// --------------------------------------------------
-// Button
-// --------------------------------------------------
+
+// ==========================================
+// BUTTON
+// ==========================================
 
 connectBtn.addEventListener(
   'click',
-  connectWallet
+  () => {
+
+    createWalletModal();
+
+  }
 );
+
+
+// ==========================================
+// BASIC WALLET MODAL STYLE
+// ==========================================
+
+const style = document.createElement('style');
+
+style.textContent = `
+
+.og-wallet-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  background: rgba(0, 0, 0, 0.78);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.og-wallet-modal {
+  position: relative;
+  width: min(420px, 100%);
+  background: #111;
+  border: 1px solid #444;
+  border-radius: 16px;
+  padding: 28px;
+  box-shadow: 0 25px 80px rgba(0,0,0,.55);
+  color: white;
+}
+
+.og-wallet-close {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  width: 34px;
+  height: 34px;
+  border: 0;
+  background: transparent;
+  color: #aaa;
+  font-size: 28px;
+  cursor: pointer;
+}
+
+.og-wallet-close:hover {
+  color: white;
+}
+
+.og-wallet-title {
+  font-size: 22px;
+  font-weight: 800;
+  margin-bottom: 6px;
+}
+
+.og-wallet-subtitle {
+  color: #999;
+  font-size: 14px;
+  margin-bottom: 20px;
+}
+
+.og-wallet-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.og-wallet-option {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  border: 1px solid #333;
+  border-radius: 12px;
+  background: #181818;
+  color: white;
+  cursor: pointer;
+  text-align: left;
+  font-size: 15px;
+  transition: .15s ease;
+}
+
+.og-wallet-option:hover {
+  background: #242424;
+  border-color: #777;
+  transform: translateY(-1px);
+}
+
+.og-wallet-icon {
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 24px;
+}
+
+.og-wallet-icon img {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+}
+
+.og-wallet-name {
+  flex: 1;
+  font-weight: 600;
+}
+
+.og-wallet-arrow {
+  color: #777;
+  font-size: 18px;
+}
+
+.og-wallet-footer {
+  margin-top: 18px;
+  color: #666;
+  font-size: 11px;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.og-no-wallet {
+  padding: 20px;
+  text-align: center;
+  color: #aaa;
+  line-height: 1.5;
+  font-size: 13px;
+}
+
+`;
+
+document.head.appendChild(style);
+
+
+// ==========================================
+// INITIAL STATE
+// ==========================================
+
+walletChip.textContent =
+  'Wallet not connected';
 
 console.log(
   'Ovine Genesis staking loaded.'
-);
-
-console.log(
-  'Wallet provider:',
-  provider
 );
