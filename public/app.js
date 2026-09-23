@@ -1,45 +1,141 @@
+```javascript
 const connectBtn = document.getElementById('connectBtn');
 const walletChip = document.getElementById('walletChip');
-const stakeButtons = document.querySelectorAll('.stake-btn');
-const stakeAllBtn = document.getElementById('stakeAllBtn');
-const pointsEl = document.getElementById('points');
-const stakedCountEl = document.getElementById('stakedCount');
-const dailyEarnEl = document.getElementById('dailyEarn');
+const demoNote = document.getElementById('demoNote');
 
-let connected = false;
-let points = 0;
+const CHAIN_ID = 4663;
+const CHAIN_ID_HEX = '0x1237';
 
-function updateStats() {
-  const staked = [...document.querySelectorAll('.nft-card')].filter(card => card.dataset.staked === 'true').length;
-  stakedCountEl.textContent = staked;
-  dailyEarnEl.textContent = `+${staked * 10}`;
-  pointsEl.textContent = points.toLocaleString();
+const ROBINHOOD_CHAIN = {
+  chainId: CHAIN_ID_HEX,
+  chainName: 'Robinhood Chain',
+  nativeCurrency: {
+    name: 'Ether',
+    symbol: 'ETH',
+    decimals: 18
+  },
+  rpcUrls: ['https://rpc.mainnet.chain.robinhood.com'],
+  blockExplorerUrls: ['https://robinhoodchain.blockscout.com']
+};
+
+let account = null;
+
+function shortenAddress(address) {
+  return `${address.slice(0, 6)}...${address.slice(-4)}`;
 }
 
-connectBtn.addEventListener('click', () => {
-  connected = !connected;
-  connectBtn.textContent = connected ? '0x8A...91F2' : 'Connect Wallet';
-  walletChip.textContent = connected ? 'Connected: 0x8A...91F2' : 'Wallet not connected';
-});
+function setConnected(address) {
+  account = address;
 
-stakeButtons.forEach(btn => {
-  btn.addEventListener('click', () => {
-    const card = btn.closest('.nft-card');
-    const isStaked = card.dataset.staked === 'true';
-    card.dataset.staked = (!isStaked).toString();
-    btn.textContent = isStaked ? 'Stake' : 'Unstake';
-    points += isStaked ? 0 : 10;
-    updateStats();
-  });
-});
+  const short = shortenAddress(address);
 
-stakeAllBtn.addEventListener('click', () => {
-  document.querySelectorAll('.nft-card').forEach(card => {
-    card.dataset.staked = 'true';
-    card.querySelector('.stake-btn').textContent = 'Unstake';
-  });
-  points += 30;
-  updateStats();
-});
+  connectBtn.textContent = short;
+  walletChip.textContent = `Connected: ${short}`;
 
-updateStats();
+  demoNote.textContent =
+    'Wallet connected. NFT ownership check will be added next.';
+}
+
+function setDisconnected() {
+  account = null;
+
+  connectBtn.textContent = 'Connect Wallet';
+  walletChip.textContent = 'Wallet not connected';
+
+  demoNote.textContent = 'Connect your wallet to continue.';
+}
+
+async function switchToRobinhood() {
+  if (!window.ethereum) {
+    throw new Error('No EVM wallet detected.');
+  }
+
+  try {
+    await window.ethereum.request({
+      method: 'wallet_switchEthereumChain',
+      params: [{ chainId: CHAIN_ID_HEX }]
+    });
+  } catch (error) {
+    // Error 4902 = chain not added to wallet
+    if (error.code === 4902) {
+      await window.ethereum.request({
+        method: 'wallet_addEthereumChain',
+        params: [ROBINHOOD_CHAIN]
+      });
+    } else {
+      throw error;
+    }
+  }
+}
+
+async function connectWallet() {
+  if (!window.ethereum) {
+    alert(
+      'No compatible wallet detected. Please install MetaMask or another EVM-compatible wallet.'
+    );
+    return;
+  }
+
+  try {
+    const accounts = await window.ethereum.request({
+      method: 'eth_requestAccounts'
+    });
+
+    if (!accounts || accounts.length === 0) {
+      return;
+    }
+
+    await switchToRobinhood();
+
+    const chainId = await window.ethereum.request({
+      method: 'eth_chainId'
+    });
+
+    if (parseInt(chainId, 16) !== CHAIN_ID) {
+      alert('Please switch to Robinhood Chain.');
+      return;
+    }
+
+    setConnected(accounts[0]);
+
+  } catch (error) {
+    console.error(error);
+
+    alert(
+      error?.message ||
+      'Wallet connection failed.'
+    );
+  }
+}
+
+async function handleAccountsChanged(accounts) {
+  if (!accounts || accounts.length === 0) {
+    setDisconnected();
+    return;
+  }
+
+  setConnected(accounts[0]);
+}
+
+async function handleChainChanged(chainId) {
+  if (parseInt(chainId, 16) !== CHAIN_ID) {
+    walletChip.textContent = 'Wrong network';
+    demoNote.textContent =
+      'Please switch to Robinhood Chain to use Ovine Genesis staking.';
+    return;
+  }
+
+  if (account) {
+    setConnected(account);
+  }
+}
+
+connectBtn.addEventListener('click', connectWallet);
+
+if (window.ethereum) {
+  window.ethereum.on('accountsChanged', handleAccountsChanged);
+  window.ethereum.on('chainChanged', handleChainChanged);
+}
+
+walletChip.textContent = 'Wallet not connected';
+```
