@@ -1,63 +1,90 @@
+// ==========================================
+// OVINE GENESIS — STAKING APP
+// ==========================================
+
+// ------------------------------------------
+// DOM ELEMENTS
+// ------------------------------------------
+
 const connectBtn = document.getElementById('connectBtn');
 const walletChip = document.getElementById('walletChip');
 const demoNote = document.getElementById('demoNote');
 
 const stakeButtons = document.querySelectorAll('.stake-btn');
 const stakeAllBtn = document.getElementById('stakeAllBtn');
+
 const pointsEl = document.getElementById('points');
 const stakedCountEl = document.getElementById('stakedCount');
 const dailyEarnEl = document.getElementById('dailyEarn');
+
+
+// ------------------------------------------
+// ROBINHOOD CHAIN
+// ------------------------------------------
 
 const CHAIN_ID = 4663;
 const CHAIN_ID_HEX = '0x1237';
 
 const ROBINHOOD_CHAIN = {
   chainId: CHAIN_ID_HEX,
+
   chainName: 'Robinhood Chain',
+
   nativeCurrency: {
     name: 'Ether',
     symbol: 'ETH',
     decimals: 18
   },
+
   rpcUrls: [
     'https://rpc.mainnet.chain.robinhood.com/'
   ],
+
   blockExplorerUrls: [
     'https://robinhoodchain.blockscout.com'
   ]
 };
 
+
+// ------------------------------------------
+// STATE
+// ------------------------------------------
+
 let wallets = [];
 let provider = null;
 let account = null;
 let profileOpen = false;
-
 let points = 0;
 
 
-// ==========================================
-// ADDRESS
-// ==========================================
+// ------------------------------------------
+// SHORTEN ADDRESS
+// ------------------------------------------
 
 function shortenAddress(address) {
-  return `${address.slice(0, 6)}...${address.slice(-4)}`;
+
+  if (!address) return '';
+
+  return (
+    address.slice(0, 6) +
+    '...' +
+    address.slice(-4)
+  );
 }
 
 
-// ==========================================
-// CONNECTED STATE
-// ==========================================
+// ------------------------------------------
+// SET CONNECTED
+// ------------------------------------------
 
-function setConnected(address) {
+function setConnected(address, walletInfo = null) {
+
   account = address;
 
-  const shortAddress = shortenAddress(address);
-
-  connectBtn.textContent = shortAddress;
-  walletChip.textContent = `Connected: ${shortAddress}`;
-
-  demoNote.textContent =
-    'Wallet connected. NFT ownership check coming next.';
+  provider =
+    walletInfo?.provider ||
+    provider ||
+    window.ethereum;
 
   localStorage.setItem(
     'ovine_wallet_connected',
@@ -69,26 +96,63 @@ function setConnected(address) {
     address
   );
 
-  if (provider) {
+  if (walletInfo?.uuid) {
+
     localStorage.setItem(
       'ovine_wallet_uuid',
-      getProviderUUID(provider)
+      walletInfo.uuid
     );
   }
 
+  // Update wallet chip
+
+  if (walletChip) {
+
+    walletChip.textContent =
+      shortenAddress(address);
+  }
+
+
+  // Update connect button
+
+  const currentConnectBtn =
+    document.getElementById('connectBtn');
+
+  if (currentConnectBtn) {
+
+    currentConnectBtn.textContent =
+      'PROFILE';
+  }
+
+
+  // Hide demo note
+
+  if (demoNote) {
+
+    demoNote.style.display = 'none';
+  }
+
+
+  // Attach profile
+
   attachProfileMenu();
+
+  console.log(
+    'Wallet connected:',
+    address
+  );
 }
 
 
+// ------------------------------------------
+// SET DISCONNECTED
+// ------------------------------------------
+
 function setDisconnected() {
+
   account = null;
+  provider = null;
   profileOpen = false;
-
-  connectBtn.textContent = 'Connect Wallet';
-  walletChip.textContent = 'Wallet not connected';
-
-  demoNote.textContent =
-    'Connect your wallet to continue.';
 
   localStorage.removeItem(
     'ovine_wallet_connected'
@@ -102,306 +166,468 @@ function setDisconnected() {
     'ovine_wallet_uuid'
   );
 
+
+  if (walletChip) {
+
+    walletChip.textContent =
+      'Wallet not connected';
+  }
+
+
   removeProfileMenu();
+
+
+  if (demoNote) {
+
+    demoNote.style.display = '';
+  }
+
+
+  console.log(
+    'Wallet disconnected'
+  );
 }
 
 
-// ==========================================
-// PROVIDER UUID
-// ==========================================
+// ------------------------------------------
+// GET WALLET UUID
+// ------------------------------------------
 
-function getProviderUUID(targetProvider) {
+function getProviderUUID(walletProvider) {
 
-  const wallet = wallets.find(
-    item => item.provider === targetProvider
+  const found = wallets.find(
+    wallet =>
+      wallet.provider === walletProvider
   );
 
-  return wallet?.info?.uuid || '';
+  return found?.info?.uuid || null;
 }
 
 
-// ==========================================
-// WALLET MODAL
-// ==========================================
+// ------------------------------------------
+// CREATE WALLET MODAL
+// ------------------------------------------
 
 function createWalletModal() {
 
-  const oldModal =
-    document.getElementById('walletModal');
+  let modal =
+    document.getElementById(
+      'walletModal'
+    );
 
-  if (oldModal) {
-    oldModal.remove();
+  if (modal) {
+
+    return modal;
   }
 
-  const modal = document.createElement('div');
+
+  modal =
+    document.createElement('div');
 
   modal.id = 'walletModal';
 
   modal.innerHTML = `
-    <div class="og-wallet-overlay">
 
-      <div class="og-wallet-modal">
+    <div class="wallet-modal-backdrop"></div>
+
+    <div class="wallet-modal-box">
+
+      <div class="wallet-modal-header">
+
+        <div>
+          <div class="wallet-modal-title">
+            Connect Wallet
+          </div>
+
+          <div class="wallet-modal-subtitle">
+            Select your wallet
+          </div>
+        </div>
 
         <button
-          class="og-wallet-close"
           id="walletModalClose"
+          class="wallet-modal-close"
         >
           ×
         </button>
 
-        <div class="og-wallet-title">
-          Connect Wallet
-        </div>
-
-        <div class="og-wallet-subtitle">
-          Choose your wallet
-        </div>
-
-        <div
-          class="og-wallet-list"
-          id="walletList"
-        ></div>
-
-        <div class="og-wallet-footer">
-          Make sure your wallet is installed
-          in this browser.
-        </div>
-
       </div>
+
+      <div
+        id="walletList"
+        class="wallet-list"
+      ></div>
 
     </div>
   `;
 
+
   document.body.appendChild(modal);
+
 
   document
     .getElementById('walletModalClose')
-    .addEventListener(
+    ?.addEventListener(
       'click',
       closeWalletModal
     );
 
-  document
-    .querySelector('.og-wallet-overlay')
-    .addEventListener('click', event => {
 
-      if (
-        event.target.classList.contains(
-          'og-wallet-overlay'
-        )
-      ) {
-        closeWalletModal();
-      }
+  modal
+    .querySelector(
+      '.wallet-modal-backdrop'
+    )
+    ?.addEventListener(
+      'click',
+      closeWalletModal
+    );
 
-    });
 
-  renderWalletList();
-
-  // Ask wallets to announce again
-  window.dispatchEvent(
-    new Event('eip6963:requestProvider')
-  );
+  return modal;
 }
 
+
+// ------------------------------------------
+// CLOSE WALLET MODAL
+// ------------------------------------------
 
 function closeWalletModal() {
 
   const modal =
-    document.getElementById('walletModal');
+    document.getElementById(
+      'walletModal'
+    );
 
   if (modal) {
+
     modal.remove();
   }
 }
 
 
-// ==========================================
-// WALLET LIST
-// ==========================================
+// ------------------------------------------
+// RENDER WALLET LIST
+// ------------------------------------------
 
 function renderWalletList() {
 
-  const list =
-    document.getElementById('walletList');
+  const modal =
+    createWalletModal();
 
-  if (!list) {
-    return;
-  }
+  const list =
+    modal.querySelector(
+      '#walletList'
+    );
+
+  if (!list) return;
+
 
   list.innerHTML = '';
 
-  if (wallets.length === 0) {
+
+  if (!wallets.length) {
 
     list.innerHTML = `
-      <div class="og-no-wallet">
-        No compatible browser wallet detected.
+
+      <div class="wallet-empty">
+
+        No compatible wallet found.
+
         <br><br>
-        Please install MetaMask, Rabby,
-        Coinbase Wallet, OKX, or another
-        EVM-compatible wallet.
+
+        Please install a Web3 wallet
+        such as Rabby or MetaMask.
+
       </div>
+
     `;
 
     return;
   }
 
-  wallets.forEach((wallet, index) => {
 
-    const button =
-      document.createElement('button');
+  wallets.forEach(
+    wallet => {
 
-    button.className =
-      'og-wallet-option';
-
-    const icon =
-      wallet.info?.icon || '';
-
-    const name =
-      wallet.info?.name ||
-      `Wallet ${index + 1}`;
-
-    button.innerHTML = `
-      <span class="og-wallet-icon">
-        ${
-          icon
-            ? `<img src="${icon}" alt="">`
-            : '◈'
-        }
-      </span>
-
-      <span class="og-wallet-name">
-        ${name}
-      </span>
-
-      <span class="og-wallet-arrow">
-        →
-      </span>
-    `;
-
-    button.addEventListener(
-      'click',
-      async () => {
-
-        provider = wallet.provider;
-
-        localStorage.setItem(
-          'ovine_wallet_uuid',
-          wallet.info?.uuid || ''
+      const button =
+        document.createElement(
+          'button'
         );
 
-        closeWalletModal();
+      button.className =
+        'wallet-option';
 
-        await connectWallet();
 
-      }
-    );
+      const icon =
+        wallet.info?.icon || '';
 
-    list.appendChild(button);
-  });
+
+      const name =
+        wallet.info?.name ||
+        'Wallet';
+
+
+      button.innerHTML = `
+
+        <div class="wallet-option-icon">
+
+          ${
+            icon
+              ? `<img src="${icon}" alt="">`
+              : '◎'
+          }
+
+        </div>
+
+        <div class="wallet-option-name">
+
+          ${name}
+
+        </div>
+
+        <div class="wallet-option-arrow">
+
+          →
+
+        </div>
+
+      `;
+
+
+      button.addEventListener(
+        'click',
+        async () => {
+
+          try {
+
+            await connectWallet(
+              false,
+              wallet
+            );
+
+          } catch (error) {
+
+            console.error(
+              error
+            );
+
+            alert(
+              error?.message ||
+              'Wallet connection failed.'
+            );
+          }
+
+        }
+      );
+
+
+      list.appendChild(
+        button
+      );
+    }
+  );
 }
 
 
-// ==========================================
-// ROBINHOOD CHAIN
-// ==========================================
+// ------------------------------------------
+// SWITCH TO ROBINHOOD CHAIN
+// ------------------------------------------
 
-async function switchToRobinhood() {
+async function switchToRobinhood(
+  walletProvider
+) {
 
-  if (!provider) {
+  if (!walletProvider) {
+
     throw new Error(
       'Wallet provider not found.'
     );
   }
 
+
   try {
 
-    await provider.request({
+    await walletProvider.request({
+
       method:
         'wallet_switchEthereumChain',
 
       params: [
         {
-          chainId: CHAIN_ID_HEX
+          chainId:
+            CHAIN_ID_HEX
         }
       ]
+
     });
 
   } catch (error) {
 
-    if (error.code === 4902) {
+    // Chain not added
 
-      await provider.request({
+    if (
+      error.code === 4902 ||
+      error.code === -32603
+    ) {
+
+      await walletProvider.request({
+
         method:
           'wallet_addEthereumChain',
 
         params: [
           ROBINHOOD_CHAIN
         ]
+
       });
 
     } else {
 
       throw error;
-
     }
   }
 }
 
 
-// ==========================================
-// CONNECT
-// ==========================================
+// ------------------------------------------
+// CONNECT WALLET
+// ------------------------------------------
 
 async function connectWallet(
-  silent = false
+  silent = false,
+  walletInfo = null
 ) {
-
-  if (!provider) {
-
-    if (!silent) {
-      alert(
-        'Please choose a wallet first.'
-      );
-    }
-
-    return;
-  }
 
   try {
 
-    const accounts =
-      await provider.request({
-        method: 'eth_requestAccounts'
-      });
+    let walletProvider =
+      walletInfo?.provider;
 
-    if (
-      !accounts ||
-      accounts.length === 0
-    ) {
-      return;
+
+    // If no selected wallet,
+    // use normal injected provider
+
+    if (!walletProvider) {
+
+      walletProvider =
+        window.ethereum;
     }
 
-    await switchToRobinhood();
 
-    const chainId =
-      await provider.request({
-        method: 'eth_chainId'
-      });
-
-    if (
-      parseInt(chainId, 16) !== CHAIN_ID
-    ) {
+    if (!walletProvider) {
 
       if (!silent) {
-        alert(
-          'Please switch to Robinhood Chain.'
-        );
+
+        openWalletPicker();
+
       }
 
       return;
     }
 
-    setConnected(accounts[0]);
+
+    provider =
+      walletProvider;
+
+
+    // Request account
+
+    const accounts =
+      await walletProvider.request({
+
+        method:
+          silent
+            ? 'eth_accounts'
+            : 'eth_requestAccounts'
+
+      });
+
+
+    if (
+      !accounts ||
+      !accounts.length
+    ) {
+
+      if (!silent) {
+
+        openWalletPicker();
+
+      }
+
+      return;
+    }
+
+
+    const address =
+      accounts[0];
+
+
+    // Switch chain
+
+    await switchToRobinhood(
+      walletProvider
+    );
+
+
+    // Verify chain
+
+    const chainId =
+      await walletProvider.request({
+
+        method:
+          'eth_chainId'
+
+      });
+
+
+    if (
+      chainId.toLowerCase() !==
+      CHAIN_ID_HEX.toLowerCase()
+    ) {
+
+      throw new Error(
+        'Please switch to Robinhood Chain.'
+      );
+    }
+
+
+    const uuid =
+      getProviderUUID(
+        walletProvider
+      );
+
+
+    setConnected(
+      address,
+      {
+        provider:
+          walletProvider,
+
+        uuid:
+          uuid
+      }
+    );
+
+
+    closeWalletModal();
+
+
+    // Listen for wallet changes
+
+    if (
+      walletProvider.on
+    ) {
+
+      walletProvider.on(
+        'accountsChanged',
+        handleAccountsChanged
+      );
+
+      walletProvider.on(
+        'chainChanged',
+        handleChainChanged
+      );
+    }
 
   } catch (error) {
 
@@ -410,101 +636,167 @@ async function connectWallet(
       error
     );
 
+
     if (!silent) {
 
       alert(
         error?.message ||
-        'Wallet connection failed.'
+        'Failed to connect wallet.'
       );
-
     }
   }
 }
 
 
-// ==========================================
+// ------------------------------------------
 // AUTO RECONNECT
-// ==========================================
+// ------------------------------------------
 
 async function autoReconnect() {
+
+  const wasConnected =
+    localStorage.getItem(
+      'ovine_wallet_connected'
+    );
+
+
+  if (
+    wasConnected !== 'true'
+  ) {
+
+    return;
+  }
+
+
+  const savedAddress =
+    localStorage.getItem(
+      'ovine_wallet_address'
+    );
+
+
+  if (!savedAddress) {
+
+    return;
+  }
+
+
+  let walletProvider =
+    null;
+
 
   const savedUUID =
     localStorage.getItem(
       'ovine_wallet_uuid'
     );
 
-  if (!savedUUID) {
+
+  if (savedUUID) {
+
+    const savedWallet =
+      wallets.find(
+        wallet =>
+          wallet.info?.uuid ===
+          savedUUID
+      );
+
+
+    if (savedWallet) {
+
+      walletProvider =
+        savedWallet.provider;
+    }
+  }
+
+
+  if (!walletProvider) {
+
+    walletProvider =
+      window.ethereum;
+  }
+
+
+  if (!walletProvider) {
+
     return;
   }
 
-  const savedWallet =
-    wallets.find(
-      wallet =>
-        wallet.info?.uuid === savedUUID
-    );
-
-  if (!savedWallet) {
-    return;
-  }
-
-  provider = savedWallet.provider;
 
   try {
 
-    // IMPORTANT:
-    // eth_accounts does NOT open a popup.
     const accounts =
-      await provider.request({
-        method: 'eth_accounts'
+      await walletProvider.request({
+
+        method:
+          'eth_accounts'
+
       });
 
-    if (
-      !accounts ||
-      accounts.length === 0
-    ) {
-      return;
-    }
-
-    const chainId =
-      await provider.request({
-        method: 'eth_chainId'
-      });
 
     if (
-      parseInt(chainId, 16) !== CHAIN_ID
+      accounts &&
+      accounts.length
     ) {
 
-      walletChip.textContent =
-        'Wrong network';
+      const address =
+        accounts[0];
 
-      demoNote.textContent =
-        'Please switch to Robinhood Chain.';
 
-      return;
+      const chainId =
+        await walletProvider.request({
+
+          method:
+            'eth_chainId'
+
+        });
+
+
+      if (
+        chainId.toLowerCase() ===
+        CHAIN_ID_HEX.toLowerCase()
+      ) {
+
+        setConnected(
+          address,
+          {
+            provider:
+              walletProvider,
+
+            uuid:
+              getProviderUUID(
+                walletProvider
+              )
+          }
+        );
+
+      } else {
+
+        console.log(
+          'Wallet connected but wrong network.'
+        );
+      }
     }
-
-    setConnected(accounts[0]);
 
   } catch (error) {
 
-    console.log(
-      'Auto reconnect skipped:',
+    console.error(
+      'Auto reconnect failed:',
       error
     );
-
   }
 }
 
 
-// ==========================================
+// ------------------------------------------
 // ACCOUNT CHANGED
-// ==========================================
+// ------------------------------------------
 
-function handleAccountsChanged(accounts) {
+function handleAccountsChanged(
+  accounts
+) {
 
   if (
     !accounts ||
-    accounts.length === 0
+    !accounts.length
   ) {
 
     setDisconnected();
@@ -512,200 +804,326 @@ function handleAccountsChanged(accounts) {
     return;
   }
 
-  setConnected(accounts[0]);
+
+  setConnected(
+    accounts[0],
+    {
+      provider:
+        provider,
+
+      uuid:
+        getProviderUUID(
+          provider
+        )
+    }
+  );
 }
 
 
-// ==========================================
+// ------------------------------------------
 // CHAIN CHANGED
-// ==========================================
+// ------------------------------------------
 
-function handleChainChanged(chainId) {
+function handleChainChanged(
+  chainId
+) {
 
   if (
-    parseInt(chainId, 16) !== CHAIN_ID
+    chainId.toLowerCase() !==
+    CHAIN_ID_HEX.toLowerCase()
   ) {
 
-    walletChip.textContent =
-      'Wrong network';
-
-    demoNote.textContent =
-      'Please switch to Robinhood Chain.';
+    alert(
+      'Please switch back to Robinhood Chain.'
+    );
 
     return;
   }
 
+
   if (account) {
-    setConnected(account);
+
+    setConnected(
+      account,
+      {
+        provider:
+          provider,
+
+        uuid:
+          getProviderUUID(
+            provider
+          )
+      }
+    );
   }
 }
+
+
 // ==========================================
 // PROFILE STATS
 // ==========================================
 
 function updateProfileStats() {
+
   const profileStaked =
-    document.getElementById('profileStaked');
+    document.getElementById(
+      'profileStaked'
+    );
+
 
   const profilePoints =
-    document.getElementById('profilePoints');
+    document.getElementById(
+      'profilePoints'
+    );
+
 
   const cards =
-    [...document.querySelectorAll('.nft-card')];
+    [
+      ...document.querySelectorAll(
+        '.nft-card'
+      )
+    ];
+
 
   const staked =
     cards.filter(
-      card => card.dataset.staked === 'true'
+      card =>
+        card.dataset.staked ===
+        'true'
     ).length;
 
+
   if (profileStaked) {
-    profileStaked.textContent = staked;
+
+    profileStaked.textContent =
+      staked;
   }
 
+
   if (profilePoints) {
+
     profilePoints.textContent =
       points.toLocaleString();
   }
 }
+
+
 // ==========================================
 // PROFILE MENU
 // ==========================================
 
 function attachProfileMenu() {
 
-  removeProfileMenu();
+  const oldProfile =
+    document.getElementById(
+      'profileWrapper'
+    );
 
-  if (!account) {
-    return;
+  if (oldProfile) {
+
+    oldProfile.remove();
   }
 
-  const wrapper =
-    document.createElement('div');
 
-  wrapper.id = 'profileWrapper';
+  const currentConnectBtn =
+    document.getElementById(
+      'connectBtn'
+    );
+
+
+  if (currentConnectBtn) {
+
+    currentConnectBtn.style.display =
+      'none';
+  }
+
+
+  const nav =
+    document.querySelector(
+      '.nav'
+    );
+
+
+  if (!nav) return;
+
+
+  const wrapper =
+    document.createElement(
+      'div'
+    );
+
+
+  wrapper.id =
+    'profileWrapper';
 
   wrapper.className =
-    'og-profile-wrapper';
+    'profile-wrapper';
+
 
   wrapper.innerHTML = `
 
     <button
-      class="og-profile-button"
-      id="profileButton"
+      id="profileBtn"
+      class="profile-btn"
     >
 
-      <span class="og-profile-avatar">
+      <span class="profile-avatar">
         OG
       </span>
 
-      <span class="og-profile-address">
+      <span>
         ${shortenAddress(account)}
       </span>
 
-      <span class="og-profile-arrow">
-        ▼
+      <span class="profile-arrow">
+        ▾
       </span>
 
     </button>
 
+
     <div
-      class="og-profile-menu"
-      id="profileMenu"
+      id="profileDropdown"
+      class="profile-dropdown"
     >
 
-      <div class="og-profile-header">
+      <div class="profile-header">
 
-        <div class="og-profile-big-avatar">
+        <div class="profile-avatar-large">
           OG
         </div>
 
         <div>
 
-          <div class="og-profile-title">
+          <div class="profile-name">
             Ovine Holder
           </div>
 
-          <div class="og-profile-small">
-            Robinhood Chain
+          <div class="profile-address">
+            ${account}
           </div>
 
         </div>
 
       </div>
 
-      <div class="og-profile-divider"></div>
 
-      <div class="og-profile-label">
-        WALLET
+      <div class="profile-divider"></div>
+
+
+      <div class="profile-stat-grid">
+
+        <div class="profile-stat">
+
+          <div class="profile-stat-label">
+            OVINE NFTs
+          </div>
+
+          <div
+            id="profileNfts"
+            class="profile-stat-value"
+          >
+            --
+          </div>
+
+        </div>
+
+
+        <div class="profile-stat">
+
+          <div class="profile-stat-label">
+            STAKED
+          </div>
+
+          <div
+            id="profileStaked"
+            class="profile-stat-value"
+          >
+            0
+          </div>
+
+        </div>
+
+
+        <div class="profile-stat">
+
+          <div class="profile-stat-label">
+            POINTS
+          </div>
+
+          <div
+            id="profilePoints"
+            class="profile-stat-value"
+          >
+            0
+          </div>
+
+        </div>
+
       </div>
 
-      <div class="og-profile-wallet">
-        ${account}
-      </div>
+
+      <div class="profile-divider"></div>
+
 
       <button
-        class="og-copy-button"
-        id="copyWalletButton"
+        id="copyAddressBtn"
+        class="profile-action"
       >
+
         Copy Address
+
       </button>
 
-      <div class="og-profile-divider"></div>
-
-      <div class="og-profile-row">
-        <span>Ovine NFTs</span>
-        <strong>--</strong>
-      </div>
-
-      <div class="og-profile-row">
-        <span>Staked</span>
-        <strong id="profileStaked">
-          0
-        </strong>
-      </div>
-
-      <div class="og-profile-row">
-        <span>Points</span>
-        <strong id="profilePoints">
-          0
-        </strong>
-      </div>
-
-      <div class="og-profile-divider"></div>
 
       <button
-        class="og-disconnect-button"
-        id="disconnectButton"
+        id="disconnectWalletBtn"
+        class="profile-action danger"
       >
+
         Disconnect Wallet
+
       </button>
 
     </div>
+
   `;
 
-  connectBtn.replaceWith(wrapper);
 
-  document
-    .getElementById('profileButton')
-    .addEventListener(
-      'click',
-      toggleProfileMenu
+  nav.appendChild(
+    wrapper
+  );
+
+
+  const profileBtn =
+    document.getElementById(
+      'profileBtn'
     );
 
-  document
-    .getElementById('disconnectButton')
-    .addEventListener(
-      'click',
-      () => {
 
-        setDisconnected();
-
-      }
+  const dropdown =
+    document.getElementById(
+      'profileDropdown'
     );
 
+
+  profileBtn?.addEventListener(
+    'click',
+    event => {
+
+      event.stopPropagation();
+
+      toggleProfileMenu();
+
+    }
+  );
+
+
   document
-    .getElementById('copyWalletButton')
-    .addEventListener(
+    .getElementById(
+      'copyAddressBtn'
+    )
+    ?.addEventListener(
       'click',
       async () => {
 
@@ -717,205 +1135,285 @@ function attachProfileMenu() {
 
           const button =
             document.getElementById(
-              'copyWalletButton'
+              'copyAddressBtn'
             );
 
-          button.textContent =
-            'Copied ✓';
+          if (button) {
 
-          setTimeout(() => {
+            button.textContent =
+              'Copied ✓';
 
-            if (button) {
-              button.textContent =
-                'Copy Address';
-            }
+            setTimeout(
+              () => {
 
-          }, 1500);
+                button.textContent =
+                  'Copy Address';
+
+              },
+              1500
+            );
+          }
 
         } catch (error) {
 
-          console.error(error);
+          console.error(
+            error
+          );
 
+          alert(
+            'Could not copy address.'
+          );
         }
+      }
+    );
+
+
+  document
+    .getElementById(
+      'disconnectWalletBtn'
+    )
+    ?.addEventListener(
+      'click',
+      () => {
+
+        setDisconnected();
 
       }
     );
+
 
   updateProfileStats();
 }
 
 
+// ------------------------------------------
+// TOGGLE PROFILE
+// ------------------------------------------
+
 function toggleProfileMenu() {
 
-  const menu =
+  const dropdown =
     document.getElementById(
-      'profileMenu'
+      'profileDropdown'
     );
 
-  if (!menu) {
-    return;
-  }
 
-  profileOpen = !profileOpen;
+  if (!dropdown) return;
 
-  menu.classList.toggle(
-    'show',
+
+  profileOpen =
+    !profileOpen;
+
+
+  dropdown.classList.toggle(
+    'open',
     profileOpen
   );
 }
 
 
+// ------------------------------------------
+// REMOVE PROFILE
+// ------------------------------------------
+
 function removeProfileMenu() {
 
-  const wrapper =
+  const profile =
     document.getElementById(
       'profileWrapper'
     );
 
-  if (wrapper) {
 
-    wrapper.remove();
+  if (profile) {
 
+    profile.remove();
   }
 
-  // Re-create original connect button
-  if (
-    !document.getElementById(
-      'connectBtn'
-    )
-  ) {
 
-    const button =
-      document.createElement('button');
-
-    button.id = 'connectBtn';
-
-    button.className =
-      'btn btn-primary';
-
-    button.textContent =
-      'Connect Wallet';
-
-    const nav =
-      document.querySelector('.nav');
-
-    if (nav) {
-      nav.appendChild(button);
-    }
-
-    button.addEventListener(
-      'click',
-      openWalletPicker
+  const nav =
+    document.querySelector(
+      '.nav'
     );
+
+
+  if (!nav) return;
+
+
+  const existingConnect =
+    document.getElementById(
+      'connectBtn'
+    );
+
+
+  if (existingConnect) {
+
+    existingConnect.style.display =
+      '';
+    
+    existingConnect.textContent =
+      'CONNECT WALLET';
+
+    return;
   }
+
+
+  // Create new connect button
+  // if original one was removed
+
+  const button =
+    document.createElement(
+      'button'
+    );
+
+
+  button.id =
+    'connectBtn';
+
+  button.className =
+    'connect-btn';
+
+  button.textContent =
+    'CONNECT WALLET';
+
+
+  nav.appendChild(
+    button
+  );
 }
 
 
 // ==========================================
-// WALLET PICKER
+// OPEN WALLET PICKER
 // ==========================================
 
 function openWalletPicker() {
 
   createWalletModal();
 
+  renderWalletList();
 }
 
 
 // ==========================================
-// STAKING DEMO
+// DEMO STAKING
 // ==========================================
 
 function updateStats() {
 
   const cards =
-    [...document.querySelectorAll(
-      '.nft-card'
-    )];
+    [
+      ...document.querySelectorAll(
+        '.nft-card'
+      )
+    ];
+
 
   const staked =
     cards.filter(
       card =>
-        card.dataset.staked === 'true'
+        card.dataset.staked ===
+        'true'
     ).length;
 
+
+  const daily =
+    staked * 10;
+
+
   if (stakedCountEl) {
+
     stakedCountEl.textContent =
       staked;
   }
 
+
   if (dailyEarnEl) {
+
     dailyEarnEl.textContent =
-      `+${staked * 10}`;
+      daily;
   }
 
+
   if (pointsEl) {
+
     pointsEl.textContent =
       points.toLocaleString();
   }
 
-  const profileStaked =
-    document.getElementById(
-      'profileStaked'
-    );
 
-  const profilePoints =
-    document.getElementById(
-      'profilePoints'
-    );
-
-  if (profileStaked) {
-    profileStaked.textContent =
-      staked;
-  }
-
-  if (profilePoints) {
-    profilePoints.textContent =
-      points.toLocaleString();
-  }
+  updateProfileStats();
 }
 
 
-stakeButtons.forEach(button => {
+// ------------------------------------------
+// STAKE / UNSTAKE
+// ------------------------------------------
 
-  button.addEventListener(
-    'click',
-    () => {
+stakeButtons.forEach(
+  button => {
 
-      if (!account) {
+    button.addEventListener(
+      'click',
+      () => {
 
-        alert(
-          'Please connect your wallet first.'
-        );
+        if (!account) {
 
-        return;
+          openWalletPicker();
+
+          return;
+        }
+
+
+        const card =
+          button.closest(
+            '.nft-card'
+          );
+
+
+        if (!card) return;
+
+
+        const isStaked =
+          card.dataset.staked ===
+          'true';
+
+
+        if (isStaked) {
+
+          card.dataset.staked =
+            'false';
+
+          button.textContent =
+            'STAKE';
+
+          button.classList.remove(
+            'unstake'
+          );
+
+        } else {
+
+          card.dataset.staked =
+            'true';
+
+          button.textContent =
+            'UNSTAKE';
+
+          button.classList.add(
+            'unstake'
+          );
+        }
+
+
+        updateStats();
       }
+    );
+  }
+);
 
-      const card =
-        button.closest('.nft-card');
 
-      const isStaked =
-        card.dataset.staked === 'true';
-
-      card.dataset.staked =
-        (!isStaked).toString();
-
-      button.textContent =
-        isStaked
-          ? 'Stake'
-          : 'Unstake';
-
-      if (!isStaked) {
-        points += 10;
-      }
-
-      updateStats();
-
-    }
-  );
-
-});
-
+// ------------------------------------------
+// STAKE ALL
+// ------------------------------------------
 
 if (stakeAllBtn) {
 
@@ -925,37 +1423,49 @@ if (stakeAllBtn) {
 
       if (!account) {
 
-        alert(
-          'Please connect your wallet first.'
-        );
+        openWalletPicker();
 
         return;
       }
 
-      document
-        .querySelectorAll('.nft-card')
-        .forEach(card => {
+
+      const cards =
+        [
+          ...document.querySelectorAll(
+            '.nft-card'
+          )
+        ];
+
+
+      cards.forEach(
+        card => {
 
           card.dataset.staked =
             'true';
+
 
           const button =
             card.querySelector(
               '.stake-btn'
             );
 
-          if (button) {
-            button.textContent =
-              'Unstake';
-          }
 
-        });
+          if (button) {
+
+            button.textContent =
+              'UNSTAKE';
+
+            button.classList.add(
+              'unstake'
+            );
+          }
+        }
+      );
+
 
       updateStats();
-
     }
   );
-
 }
 
 
@@ -967,48 +1477,58 @@ window.addEventListener(
   'eip6963:announceProvider',
   event => {
 
-    const detail = event.detail;
+    const detail =
+      event.detail;
 
-    if (
-      !detail ||
-      !detail.provider ||
-      !detail.info
-    ) {
-      return;
-    }
+
+    if (!detail) return;
+
+
+    const provider =
+      detail.provider;
+
+    const info =
+      detail.info;
+
+
+    if (!provider || !info) return;
+
 
     const exists =
       wallets.some(
         wallet =>
           wallet.info?.uuid ===
-          detail.info.uuid
+          info.uuid
       );
 
-    if (!exists) {
 
-      wallets.push(detail);
+    if (exists) return;
 
-    }
 
-    // Refresh modal if it is open
-    if (
-      document.getElementById(
-        'walletModal'
-      )
-    ) {
+    wallets.push({
 
-      renderWalletList();
+      info:
+        info,
 
-    }
+      provider:
+        provider
 
-    // Try auto reconnect after wallet discovery
+    });
+
+
+    renderWalletList();
+
+
+    // Try auto reconnect
+    // after wallet discovery
+
     autoReconnect();
-
   }
 );
 
 
-// Ask installed wallets to announce
+// Request wallet announcements
+
 window.dispatchEvent(
   new Event(
     'eip6963:requestProvider'
@@ -1016,41 +1536,39 @@ window.dispatchEvent(
 );
 
 
-// ==========================================
-// FALLBACK WALLET
-// ==========================================
+// ------------------------------------------
+// FALLBACK INJECTED WALLET
+// ------------------------------------------
 
-if (window.ethereum) {
+if (
+  window.ethereum &&
+  wallets.length === 0
+) {
 
-  const exists =
-    wallets.some(
-      wallet =>
-        wallet.provider ===
-        window.ethereum
-    );
+  wallets.push({
 
-  if (!exists) {
+    info: {
 
-    wallets.push({
+      uuid:
+        'legacy-injected-wallet',
 
-      info: {
-        uuid: 'legacy-provider',
-        name: 'Browser Wallet',
-        icon: ''
-      },
+      name:
+        'Browser Wallet',
 
-      provider:
-        window.ethereum
+      icon:
+        ''
 
-    });
+    },
 
-  }
+    provider:
+      window.ethereum
 
+  });
 }
 
 
 // ==========================================
-// GLOBAL CONNECT BUTTON
+// CONNECT BUTTON
 // ==========================================
 
 document.addEventListener(
@@ -1062,311 +1580,757 @@ document.addEventListener(
         '#connectBtn'
       );
 
-    if (!button) {
-      return;
+
+    if (!button) return;
+
+
+    if (account) {
+
+      toggleProfileMenu();
+
+    } else {
+
+      openWalletPicker();
+
     }
-
-    openWalletPicker();
-
   }
 );
 
 
 // ==========================================
-// DYNAMIC PROFILE CSS
+// CLOSE PROFILE WHEN CLICKING OUTSIDE
+// ==========================================
+
+document.addEventListener(
+  'click',
+  event => {
+
+    const wrapper =
+      document.getElementById(
+        'profileWrapper'
+      );
+
+
+    if (!wrapper) return;
+
+
+    if (
+      !wrapper.contains(
+        event.target
+      )
+    ) {
+
+      const dropdown =
+        document.getElementById(
+          'profileDropdown'
+        );
+
+
+      if (dropdown) {
+
+        dropdown.classList.remove(
+          'open'
+        );
+      }
+
+
+      profileOpen =
+        false;
+    }
+  }
+);
+
+
+// ==========================================
+// DYNAMIC CSS
 // ==========================================
 
 const style =
-  document.createElement('style');
+  document.createElement(
+    'style'
+  );
+
 
 style.textContent = `
 
-.og-profile-wrapper {
-  position: relative;
-}
+/* ========================================
+   WALLET MODAL
+======================================== */
 
-.og-profile-button {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  padding: 7px 12px 7px 7px;
-  border: 1px solid #555;
-  border-radius: 10px;
-  background: #151515;
-  color: #fff;
-  cursor: pointer;
-  font-weight: 700;
-}
+#walletModal {
 
-.og-profile-button:hover {
-  border-color: #aaa;
-}
-
-.og-profile-avatar,
-.og-profile-big-avatar {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #fff;
-  color: #111;
-  font-weight: 900;
-}
-
-.og-profile-avatar {
-  width: 28px;
-  height: 28px;
-  border-radius: 7px;
-  font-size: 10px;
-}
-
-.og-profile-big-avatar {
-  width: 46px;
-  height: 46px;
-  border-radius: 10px;
-  font-size: 14px;
-}
-
-.og-profile-address {
-  font-size: 13px;
-}
-
-.og-profile-arrow {
-  color: #888;
-  font-size: 9px;
-}
-
-.og-profile-menu {
-  position: absolute;
-  top: calc(100% + 10px);
-  right: 0;
-  width: 310px;
-  padding: 18px;
-  background: #111;
-  border: 1px solid #444;
-  border-radius: 14px;
-  box-shadow: 0 25px 70px rgba(0,0,0,.55);
-  display: none;
-  z-index: 9999;
-}
-
-.og-profile-menu.show {
-  display: block;
-}
-
-.og-profile-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.og-profile-title {
-  font-weight: 800;
-  font-size: 15px;
-}
-
-.og-profile-small {
-  margin-top: 4px;
-  color: #888;
-  font-size: 11px;
-}
-
-.og-profile-divider {
-  height: 1px;
-  background: #292929;
-  margin: 16px 0;
-}
-
-.og-profile-label {
-  color: #777;
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 1px;
-  margin-bottom: 7px;
-}
-
-.og-profile-wallet {
-  color: #ccc;
-  font-size: 11px;
-  line-height: 1.5;
-  word-break: break-all;
-}
-
-.og-copy-button,
-.og-disconnect-button {
-  width: 100%;
-  padding: 10px;
-  margin-top: 10px;
-  border-radius: 8px;
-  cursor: pointer;
-  font-weight: 700;
-}
-
-.og-copy-button {
-  border: 1px solid #333;
-  background: #1c1c1c;
-  color: #fff;
-}
-
-.og-disconnect-button {
-  border: 1px solid #5a3030;
-  background: #241313;
-  color: #ffb5b5;
-}
-
-.og-copy-button:hover,
-.og-disconnect-button:hover {
-  border-color: #888;
-}
-
-.og-profile-row {
-  display: flex;
-  justify-content: space-between;
-  padding: 6px 0;
-  color: #999;
-  font-size: 13px;
-}
-
-.og-profile-row strong {
-  color: #fff;
-}
-
-.og-wallet-overlay {
   position: fixed;
+
   inset: 0;
+
   z-index: 99999;
-  background: rgba(0,0,0,.78);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
+
 }
 
-.og-wallet-modal {
-  position: relative;
-  width: min(420px,100%);
-  background: #111;
-  border: 1px solid #444;
-  border-radius: 16px;
-  padding: 28px;
-  color: white;
-  box-shadow: 0 25px 80px rgba(0,0,0,.55);
-}
 
-.og-wallet-close {
+.wallet-modal-backdrop {
+
   position: absolute;
-  top: 12px;
-  right: 14px;
-  width: 34px;
-  height: 34px;
-  border: 0;
-  background: transparent;
-  color: #aaa;
-  font-size: 28px;
-  cursor: pointer;
+
+  inset: 0;
+
+  background:
+    rgba(0, 0, 0, 0.78);
+
+  backdrop-filter:
+    blur(8px);
+
 }
 
-.og-wallet-title {
-  font-size: 22px;
-  font-weight: 800;
-  margin-bottom: 6px;
+
+.wallet-modal-box {
+
+  position: relative;
+
+  z-index: 2;
+
+  width:
+    min(440px, calc(100% - 32px));
+
+  margin:
+    12vh auto 0;
+
+  padding:
+    24px;
+
+  background:
+    #111;
+
+  border:
+    1px solid
+    rgba(255,255,255,.12);
+
+  border-radius:
+    18px;
+
+  box-shadow:
+    0 30px 100px
+    rgba(0,0,0,.65);
+
 }
 
-.og-wallet-subtitle {
-  color: #999;
-  font-size: 14px;
-  margin-bottom: 20px;
+
+.wallet-modal-header {
+
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    space-between;
+
+  margin-bottom:
+    20px;
+
 }
 
-.og-wallet-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+
+.wallet-modal-title {
+
+  font-size:
+    20px;
+
+  font-weight:
+    800;
+
 }
 
-.og-wallet-option {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 14px 16px;
-  border: 1px solid #333;
-  border-radius: 12px;
-  background: #181818;
-  color: white;
-  cursor: pointer;
-  text-align: left;
-  font-size: 15px;
+
+.wallet-modal-subtitle {
+
+  margin-top:
+    4px;
+
+  opacity:
+    .55;
+
+  font-size:
+    13px;
+
 }
 
-.og-wallet-option:hover {
-  background: #242424;
-  border-color: #777;
+
+.wallet-modal-close {
+
+  border:
+    0;
+
+  background:
+    transparent;
+
+  color:
+    white;
+
+  font-size:
+    28px;
+
+  cursor:
+    pointer;
+
 }
 
-.og-wallet-icon {
-  width: 34px;
-  height: 34px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
+
+.wallet-list {
+
+  display:
+    flex;
+
+  flex-direction:
+    column;
+
+  gap:
+    10px;
+
 }
 
-.og-wallet-icon img {
-  width: 34px;
-  height: 34px;
-  border-radius: 8px;
+
+.wallet-option {
+
+  width:
+    100%;
+
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  gap:
+    14px;
+
+  padding:
+    13px 15px;
+
+  background:
+    rgba(255,255,255,.045);
+
+  border:
+    1px solid
+    rgba(255,255,255,.08);
+
+  border-radius:
+    12px;
+
+  color:
+    white;
+
+  cursor:
+    pointer;
+
+  text-align:
+    left;
+
+  transition:
+    .2s ease;
+
 }
 
-.og-wallet-name {
-  flex: 1;
-  font-weight: 600;
+
+.wallet-option:hover {
+
+  background:
+    rgba(255,255,255,.09);
+
+  border-color:
+    rgba(255,255,255,.2);
+
+  transform:
+    translateY(-1px);
+
 }
 
-.og-wallet-arrow {
-  color: #777;
+
+.wallet-option-icon {
+
+  width:
+    40px;
+
+  height:
+    40px;
+
+  border-radius:
+    10px;
+
+  overflow:
+    hidden;
+
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  background:
+    rgba(255,255,255,.08);
+
+  font-size:
+    20px;
+
 }
 
-.og-wallet-footer {
-  margin-top: 18px;
-  color: #666;
-  font-size: 11px;
-  text-align: center;
+
+.wallet-option-icon img {
+
+  width:
+    100%;
+
+  height:
+    100%;
+
+  object-fit:
+    cover;
+
 }
 
-.og-no-wallet {
-  padding: 20px;
-  text-align: center;
-  color: #aaa;
-  line-height: 1.5;
+
+.wallet-option-name {
+
+  flex:
+    1;
+
+  font-weight:
+    700;
+
 }
+
+
+.wallet-option-arrow {
+
+  opacity:
+    .5;
+
+  font-size:
+    18px;
+
+}
+
+
+.wallet-empty {
+
+  padding:
+    20px;
+
+  text-align:
+    center;
+
+  opacity:
+    .65;
+
+  line-height:
+    1.6;
+
+}
+
+
+/* ========================================
+   PROFILE
+======================================== */
+
+.profile-wrapper {
+
+  position:
+    relative;
+
+  display:
+    inline-flex;
+
+}
+
+
+.profile-btn {
+
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  gap:
+    8px;
+
+  padding:
+    8px 12px;
+
+  border:
+    1px solid
+    rgba(255,255,255,.14);
+
+  border-radius:
+    999px;
+
+  background:
+    rgba(255,255,255,.06);
+
+  color:
+    white;
+
+  cursor:
+    pointer;
+
+}
+
+
+.profile-avatar {
+
+  width:
+    28px;
+
+  height:
+    28px;
+
+  border-radius:
+    50%;
+
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  background:
+    white;
+
+  color:
+    black;
+
+  font-size:
+    10px;
+
+  font-weight:
+    900;
+
+}
+
+
+.profile-arrow {
+
+  opacity:
+    .5;
+
+}
+
+
+.profile-dropdown {
+
+  position:
+    absolute;
+
+  right:
+    0;
+
+  top:
+    calc(100% + 10px);
+
+  width:
+    320px;
+
+  padding:
+    16px;
+
+  background:
+    #111;
+
+  border:
+    1px solid
+    rgba(255,255,255,.12);
+
+  border-radius:
+    16px;
+
+  box-shadow:
+    0 25px 80px
+    rgba(0,0,0,.6);
+
+  opacity:
+    0;
+
+  visibility:
+    hidden;
+
+  transform:
+    translateY(-6px);
+
+  transition:
+    .18s ease;
+
+  z-index:
+    9999;
+
+}
+
+
+.profile-dropdown.open {
+
+  opacity:
+    1;
+
+  visibility:
+    visible;
+
+  transform:
+    translateY(0);
+
+}
+
+
+.profile-header {
+
+  display:
+    flex;
+
+  gap:
+    12px;
+
+  align-items:
+    center;
+
+}
+
+
+.profile-avatar-large {
+
+  width:
+    46px;
+
+  height:
+    46px;
+
+  border-radius:
+    50%;
+
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  background:
+    white;
+
+  color:
+    black;
+
+  font-weight:
+    900;
+
+}
+
+
+.profile-name {
+
+  font-weight:
+    800;
+
+  margin-bottom:
+    3px;
+
+}
+
+
+.profile-address {
+
+  max-width:
+    220px;
+
+  overflow:
+    hidden;
+
+  text-overflow:
+    ellipsis;
+
+  white-space:
+    nowrap;
+
+  opacity:
+    .5;
+
+  font-size:
+    11px;
+
+}
+
+
+.profile-divider {
+
+  height:
+    1px;
+
+  background:
+    rgba(255,255,255,.08);
+
+  margin:
+    15px 0;
+
+}
+
+
+.profile-stat-grid {
+
+  display:
+    grid;
+
+  grid-template-columns:
+    repeat(3, 1fr);
+
+  gap:
+    8px;
+
+}
+
+
+.profile-stat {
+
+  padding:
+    10px;
+
+  background:
+    rgba(255,255,255,.04);
+
+  border-radius:
+    10px;
+
+}
+
+
+.profile-stat-label {
+
+  font-size:
+    8px;
+
+  opacity:
+    .45;
+
+  margin-bottom:
+    5px;
+
+}
+
+
+.profile-stat-value {
+
+  font-size:
+    16px;
+
+  font-weight:
+    800;
+
+}
+
+
+.profile-action {
+
+  width:
+    100%;
+
+  padding:
+    11px;
+
+  margin-top:
+    8px;
+
+  border:
+    1px solid
+    rgba(255,255,255,.08);
+
+  border-radius:
+    10px;
+
+  background:
+    rgba(255,255,255,.04);
+
+  color:
+    white;
+
+  cursor:
+    pointer;
+
+  text-align:
+    left;
+
+}
+
+
+.profile-action:hover {
+
+  background:
+    rgba(255,255,255,.08);
+
+}
+
+
+.profile-action.danger {
+
+  color:
+    #ff7777;
+
+}
+
 
 @media (max-width: 600px) {
 
-  .og-profile-menu {
-    right: -10px;
-    width: 290px;
-  }
+  .profile-dropdown {
 
-  .og-profile-address {
-    display: none;
+    position:
+      fixed;
+
+    left:
+      16px;
+
+    right:
+      16px;
+
+    top:
+      80px;
+
+    width:
+      auto;
+
   }
 
 }
 
 `;
 
-document.head.appendChild(style);
+
+document.head.appendChild(
+  style
+);
 
 
 // ==========================================
 // INITIALIZE
 // ==========================================
 
-walletChip.textContent =
-  'Wallet not connected';
+if (walletChip) {
+
+  walletChip.textContent =
+    'Wallet not connected';
+}
+
 
 updateStats();
+
+
+// Try reconnect on page load
+
+autoReconnect();
+
 
 console.log(
   'Ovine Genesis staking loaded.'
