@@ -11,6 +11,642 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Press+Start+2P&display=swap" rel="stylesheet">
 
   <link rel="stylesheet" href="/styles.css" />
+<style>
+
+/* ==========================================
+   PORTAL SCREEN
+========================================== */
+
+#portalScreen {
+
+  position: fixed;
+
+  inset: 0;
+
+  z-index: 999999;
+
+  overflow: hidden;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  background:
+    radial-gradient(
+      circle at center,
+      #071426 0%,
+      #02060d 45%,
+      #000000 100%
+    );
+
+  color: #ffffff;
+
+  transition:
+    opacity 1s ease,
+    visibility 1s ease,
+    transform 1.2s ease;
+
+}
+
+
+/* ------------------------------------------
+   STARS
+------------------------------------------ */
+
+.portal-stars {
+
+  position: absolute;
+
+  inset: 0;
+
+  opacity: .7;
+
+  background-image:
+
+    radial-gradient(
+      1px 1px at 10% 20%,
+      rgba(255,255,255,.8),
+      transparent
+    ),
+
+    radial-gradient(
+      1px 1px at 25% 70%,
+      rgba(255,255,255,.6),
+      transparent
+    ),
+
+    radial-gradient(
+      1px 1px at 42% 30%,
+      rgba(255,255,255,.8),
+      transparent
+    ),
+
+    radial-gradient(
+      1px 1px at 65% 15%,
+      rgba(255,255,255,.6),
+      transparent
+    ),
+
+    radial-gradient(
+      1px 1px at 80% 60%,
+      rgba(255,255,255,.8),
+      transparent
+    ),
+
+    radial-gradient(
+      1px 1px at 90% 25%,
+      rgba(255,255,255,.5),
+      transparent
+    );
+
+  animation:
+    portalStars 8s linear infinite;
+
+}
+
+
+@keyframes portalStars {
+
+  0% {
+    transform: scale(1);
+    opacity: .5;
+  }
+
+  50% {
+    transform: scale(1.08);
+    opacity: .9;
+  }
+
+  100% {
+    transform: scale(1);
+    opacity: .5;
+  }
+
+}
+
+
+/* ------------------------------------------
+   PORTAL GLOW
+------------------------------------------ */
+
+.portal-glow {
+
+  position: absolute;
+
+  width: 420px;
+
+  height: 420px;
+
+  border-radius: 50%;
+
+  background:
+    radial-gradient(
+      circle,
+      rgba(90,170,255,.20),
+      rgba(30,90,180,.08) 40%,
+      transparent 70%
+    );
+
+  filter:
+    blur(20px);
+
+  animation:
+    portalGlow 3s ease-in-out infinite;
+
+}
+
+
+@keyframes portalGlow {
+
+  0%,
+  100% {
+
+    transform: scale(.92);
+
+    opacity: .65;
+
+  }
+
+  50% {
+
+    transform: scale(1.08);
+
+    opacity: 1;
+
+  }
+
+}
+
+
+/* ------------------------------------------
+   PORTAL RINGS
+------------------------------------------ */
+
+.portal-ring {
+
+  position: absolute;
+
+  border-radius: 50%;
+
+  border: 1px solid
+    rgba(180,220,255,.65);
+
+  box-shadow:
+
+    0 0 15px
+      rgba(80,170,255,.5),
+
+    inset 0 0 15px
+      rgba(80,170,255,.2);
+
+}
+
+
+.portal-ring-outer {
+
+  width: 430px;
+
+  height: 430px;
+
+  animation:
+    portalRotate 18s linear infinite;
+
+}
+
+
+.portal-ring-middle {
+
+  width: 350px;
+
+  height: 350px;
+
+  border-style: dashed;
+
+  opacity: .65;
+
+  animation:
+    portalRotateReverse 12s linear infinite;
+
+}
+
+
+.portal-ring-inner {
+
+  width: 260px;
+
+  height: 260px;
+
+  opacity: .9;
+
+  box-shadow:
+
+    0 0 35px
+      rgba(100,190,255,.7),
+
+    inset 0 0 35px
+      rgba(100,190,255,.25);
+
+  animation:
+    portalPulse 3s ease-in-out infinite;
+
+}
+
+
+@keyframes portalRotate {
+
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+
+}
+
+
+@keyframes portalRotateReverse {
+
+  from {
+    transform: rotate(360deg);
+  }
+
+  to {
+    transform: rotate(0deg);
+  }
+
+}
+
+
+@keyframes portalPulse {
+
+  0%,
+  100% {
+
+    transform: scale(.96);
+
+    opacity: .65;
+
+  }
+
+  50% {
+
+    transform: scale(1.04);
+
+    opacity: 1;
+
+  }
+
+}
+
+
+/* ------------------------------------------
+   CENTER CONTENT
+------------------------------------------ */
+
+.portal-center {
+
+  position: relative;
+
+  z-index: 5;
+
+  display: flex;
+
+  flex-direction: column;
+
+  align-items: center;
+
+  text-align: center;
+
+}
+
+
+.portal-symbol {
+
+  width: 46px;
+
+  height: 46px;
+
+  margin-bottom: 22px;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  border: 1px solid
+    rgba(255,255,255,.6);
+
+  border-radius: 50%;
+
+  font-size: 22px;
+
+  box-shadow:
+    0 0 25px
+    rgba(150,210,255,.45);
+
+  animation:
+    symbolFloat 3s ease-in-out infinite;
+
+}
+
+
+@keyframes symbolFloat {
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-7px);
+  }
+
+}
+
+
+.portal-label {
+
+  margin-bottom: 12px;
+
+  font-size: 11px;
+
+  letter-spacing: 6px;
+
+  opacity: .65;
+
+}
+
+
+.portal-center h1 {
+
+  margin: 0;
+
+  font-size: clamp(
+    30px,
+    5vw,
+    64px
+  );
+
+  letter-spacing: 5px;
+
+  font-weight: 800;
+
+  text-shadow:
+
+    0 0 15px
+      rgba(255,255,255,.3),
+
+    0 0 40px
+      rgba(80,160,255,.35);
+
+}
+
+
+.portal-center p {
+
+  margin: 16px 0 28px;
+
+  font-size: 11px;
+
+  letter-spacing: 4px;
+
+  opacity: .55;
+
+}
+
+
+/* ------------------------------------------
+   ENTER BUTTON
+------------------------------------------ */
+
+#enterPortal {
+
+  position: relative;
+
+  padding:
+    14px 38px;
+
+  border: 1px solid
+    rgba(255,255,255,.65);
+
+  border-radius: 4px;
+
+  background:
+    rgba(255,255,255,.04);
+
+  color: #ffffff;
+
+  font-size: 12px;
+
+  font-weight: 700;
+
+  letter-spacing: 3px;
+
+  cursor: pointer;
+
+  transition:
+    .25s ease;
+
+  box-shadow:
+
+    0 0 20px
+      rgba(100,180,255,.15);
+
+}
+
+
+#enterPortal span {
+
+  margin-left: 8px;
+
+  transition:
+    transform .25s ease;
+
+}
+
+
+#enterPortal:hover {
+
+  background:
+    rgba(255,255,255,.95);
+
+  color: #000;
+
+  box-shadow:
+
+    0 0 30px
+      rgba(120,200,255,.65),
+
+    0 0 70px
+      rgba(80,150,255,.25);
+
+  transform:
+    translateY(-2px);
+
+}
+
+
+#enterPortal:hover span {
+
+  display: inline-block;
+
+  transform:
+    translateX(5px);
+
+}
+
+
+/* ------------------------------------------
+   BOTTOM TEXT
+------------------------------------------ */
+
+.portal-bottom {
+
+  position: absolute;
+
+  bottom: 28px;
+
+  left: 50%;
+
+  transform:
+    translateX(-50%);
+
+  font-size: 8px;
+
+  letter-spacing: 4px;
+
+  opacity: .35;
+
+}
+
+
+/* ------------------------------------------
+   ENTER ANIMATION
+------------------------------------------ */
+
+#portalScreen.portal-exit {
+
+  opacity: 0;
+
+  visibility: hidden;
+
+  transform:
+    scale(1.18);
+
+  pointer-events: none;
+
+}
+
+
+#portalScreen.portal-exit
+.portal-ring-inner {
+
+  animation:
+    portalExpand .9s ease forwards;
+
+}
+
+
+@keyframes portalExpand {
+
+  from {
+
+    transform:
+      scale(1);
+
+    opacity: 1;
+
+  }
+
+  to {
+
+    transform:
+      scale(7);
+
+    opacity: 0;
+
+  }
+
+}
+
+
+/* ------------------------------------------
+   MOBILE
+------------------------------------------ */
+
+@media (max-width: 600px) {
+
+  .portal-ring-outer {
+
+    width: 310px;
+
+    height: 310px;
+
+  }
+
+
+  .portal-ring-middle {
+
+    width: 250px;
+
+    height: 250px;
+
+  }
+
+
+  .portal-ring-inner {
+
+    width: 190px;
+
+    height: 190px;
+
+  }
+
+
+  .portal-glow {
+
+    width: 320px;
+
+    height: 320px;
+
+  }
+
+
+  .portal-center h1 {
+
+    max-width: 330px;
+
+    font-size: 29px;
+
+    letter-spacing: 3px;
+
+  }
+
+
+  .portal-label {
+
+    font-size: 8px;
+
+    letter-spacing: 4px;
+
+  }
+
+
+  .portal-center p {
+
+    font-size: 8px;
+
+    letter-spacing: 2px;
+
+  }
+
+}
+
+</style>
 </head>
 
 <body>
