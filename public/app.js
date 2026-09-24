@@ -539,8 +539,34 @@ function handleChainChanged(chainId) {
     setConnected(account);
   }
 }
+// ==========================================
+// PROFILE STATS
+// ==========================================
 
+function updateProfileStats() {
+  const profileStaked =
+    document.getElementById('profileStaked');
 
+  const profilePoints =
+    document.getElementById('profilePoints');
+
+  const cards =
+    [...document.querySelectorAll('.nft-card')];
+
+  const staked =
+    cards.filter(
+      card => card.dataset.staked === 'true'
+    ).length;
+
+  if (profileStaked) {
+    profileStaked.textContent = staked;
+  }
+
+  if (profilePoints) {
+    profilePoints.textContent =
+      points.toLocaleString();
+  }
+}
 // ==========================================
 // PROFILE MENU
 // ==========================================
