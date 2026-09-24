@@ -909,6 +909,32 @@
     <span>Hand-drawn pixel art</span>
   </footer>
 
+ <script>
+
+document
+  .getElementById('enterPortal')
+  ?.addEventListener('click', () => {
+
+    const portal =
+      document.getElementById(
+        'portalScreen'
+      );
+
+    if (!portal) return;
+
+    portal.classList.add(
+      'portal-exit'
+    );
+
+    setTimeout(() => {
+
+      portal.remove();
+
+    }, 1300);
+
+  });
+
+</script>
   <script src="/app.js"></script>
 </body>
 </html>
